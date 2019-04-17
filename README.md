@@ -1,5 +1,8 @@
 # Testlib
 
+**This is the modified version of testlib for SYZOJ, only checker is supported.**  
+**See [https://loj.ac/article/124](https://loj.ac/article/124) for a brief tutorial (Chinese only).**
+
 ## Intro
 
 This project contains C++ implementation of the testlib. It is already being used on many programming contests in Russia (Russian National Olympiad in Informatics, different stages of ACM-ICPC). Join!

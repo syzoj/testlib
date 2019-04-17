@@ -4117,45 +4117,9 @@ void registerTestlibCmd(int argc, char* argv[])
     testlibMode = _checker;
     __testlib_set_binary(stdin);
 
-    if (argc > 1 && !strcmp("--help", argv[1]))
-        __testlib_help();
-
-    if (argc < 4 || argc > 6)
-    {
-        quit(_fail, std::string("Program must be run with the following arguments: ") +
-            std::string("<input-file> <output-file> <answer-file> [<report-file> [<-appes>]]") + 
-            "\nUse \"--help\" to get help information");
-    }
-
-    if (argc == 4)
-    {
-        resultName = "";
-        appesMode = false;
-    }
-
-    if (argc == 5)
-    {
-        resultName = argv[4];
-        appesMode = false;
-    }
-
-    if (argc == 6)
-    {
-        if (strcmp("-APPES", argv[5]) && strcmp("-appes", argv[5]))
-        {
-            quit(_fail, std::string("Program must be run with the following arguments: ") +
-                        "<input-file> <output-file> <answer-file> [<report-file> [<-appes>]]");
-        }
-        else
-        {
-            resultName = argv[4];
-            appesMode = true;
-        }
-    }
-
-    inf.init(argv[1], _input);
-    ouf.init(argv[2], _output);
-    ans.init(argv[3], _answer);
+    inf.init("input", _input);
+    ouf.init("user_out", _output);
+    ans.init("answer", _answer);
 }
 
 void registerTestlib(int argc, ...)
