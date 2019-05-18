@@ -2565,6 +2565,16 @@ NORETURN void InStream::quit(TResult result, const char* msg)
     quitscr(LightGray, message.c_str());
     std::fprintf(stderr, "\n");
 
+    if (result != _points)
+        std::fprintf(stdout, "%d\n", result == _ok ? 100 : 0);
+    else
+    {
+        if (__testlib_points == std::numeric_limits<float>::infinity())
+            quit(_fail, "Expected points, but infinity found");
+        std::string stringPoints = removeDoubleTrailingZeroes(format("%.10f", __testlib_points));
+        std::fprintf(stdout, "%s\n", stringPoints.c_str());
+    }
+
     inf.close();
     ouf.close();
     ans.close();
