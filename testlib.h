@@ -3105,7 +3105,7 @@ NORETURN void InStream::quit(TResult result, const char *msg) {
             quits(_fail, __testlib_appendMessage(message, name));
     }
 
-    std::FILE *resultFile;
+    std::FILE *resultFile = stdout;
     std::string errorName;
 
     if (__testlib_shouldCheckDirt(result)) {
@@ -3161,34 +3161,24 @@ NORETURN void InStream::quit(TResult result, const char *msg) {
             resultName = "";
             quit(_fail, "Can not write to the result file");
         }
-        if (appesMode) {
-            std::fprintf(resultFile, "<?xml version=\"1.0\" encoding=\"%s\"?>", appesModeEncoding.c_str());
-            if (isPartial)
-                std::fprintf(resultFile, "<result outcome = \"%s\" pctype = \"%d\">",
-                             outcomes[(int) _partially].c_str(), pctype);
-            else {
-                if (result != _points)
-                    std::fprintf(resultFile, "<result outcome = \"%s\">", outcomes[(int) result].c_str());
-                else {
-                    if (__testlib_points == std::numeric_limits<float>::infinity())
-                        quit(_fail, "Expected points, but infinity found");
-                    std::string stringPoints = removeDoubleTrailingZeroes(testlib_format_("%.10f", __testlib_points));
-                    std::fprintf(resultFile, "<result outcome = \"%s\" points = \"%s\">",
-                                 outcomes[(int) result].c_str(), stringPoints.c_str());
-                }
-            }
-            xmlSafeWrite(resultFile, __testlib_toPrintableMessage(message).c_str());
-            std::fprintf(resultFile, "</result>\n");
-        } else
-            std::fprintf(resultFile, "%s", __testlib_toPrintableMessage(message).c_str());
-        if (NULL == resultFile || fclose(resultFile) != 0) {
-            resultName = "";
-            quit(_fail, "Can not write to the result file");
-        }
     }
 
     quitscr(LightGray, __testlib_toPrintableMessage(message).c_str());
     std::fprintf(stderr, "\n");
+
+    if (result != _points)
+        std::fprintf(resultFile, "%d\n", result == _ok ? 100 : 0);
+    else {
+        if (__testlib_points == std::numeric_limits<float>::infinity())
+            quit(_fail, "Expected points, but infinity found");
+        std::string stringPoints = removeDoubleTrailingZeroes(format("%.10f", __testlib_points));
+        std::fprintf(resultFile, "%s\n", stringPoints.c_str());
+    }
+
+    if (resultName != "" && fclose(resultFile) != 0) {
+        resultName = "";
+        quit(_fail, "Can not write to the result file");
+    }
 
     inf.close();
     ouf.close();
@@ -3197,9 +3187,6 @@ NORETURN void InStream::quit(TResult result, const char *msg) {
         tout.close();
 
     textColor(LightGray);
-
-    if (resultName != "")
-        std::fprintf(stderr, "See file to check exit message\n");
 
     halt(resultExitCode(result));
 }
@@ -3258,11 +3245,9 @@ void InStream::quitscrS(WORD color, std::string msg) {
 }
 
 void InStream::quitscr(WORD color, const char *msg) {
-    if (resultName == "") {
-        textColor(color);
-        std::fprintf(stderr, "%s", msg);
-        textColor(LightGray);
-    }
+    textColor(color);
+    std::fprintf(stderr, "%s", msg);
+    textColor(LightGray);
 }
 
 void InStream::reset(std::FILE *file) {
@@ -4691,49 +4676,12 @@ void registerInteraction(int argc, char *argv[]) {
     testlibMode = _interactor;
     __testlib_set_binary(stdin);
 
-    if (argc > 1 && !strcmp("--help", argv[1]))
-        __testlib_help();
-
-    if (argc < 3 || argc > 6) {
-        quit(_fail, std::string("Program must be run with the following arguments: ") +
-                    std::string("<input-file> <output-file> [<answer-file> [<report-file> [<-appes>]]]") +
-                    "\nUse \"--help\" to get help information");
-    }
-
-    if (argc <= 4) {
-        resultName = "";
-        appesMode = false;
-    }
-
-#ifndef EJUDGE
-    if (argc == 5) {
-        resultName = argv[4];
-        appesMode = false;
-    }
-
-    if (argc == 6) {
-        if (strcmp("-APPES", argv[5]) && strcmp("-appes", argv[5])) {
-            quit(_fail, std::string("Program must be run with the following arguments: ") +
-                        "<input-file> <output-file> <answer-file> [<report-file> [<-appes>]]");
-        } else {
-            resultName = argv[4];
-            appesMode = true;
-        }
-    }
-#endif
-
-    inf.init(argv[1], _input);
-
-    tout.open(argv[2], std::ios_base::out);
-    if (tout.fail() || !tout.is_open())
-        quit(_fail, std::string("Can not write to the test-output-file '") + argv[2] + std::string("'"));
-
+    inf.init("input", _input);
     ouf.init(stdin, _output);
+    ans.init("answer", _answer);
 
-    if (argc >= 4)
-        ans.init(argv[3], _answer);
-    else
-        ans.name = "unopened answer stream";
+    resultName = "score.txt";
+    appesMode = false;
 }
 
 void registerValidation() {
@@ -4868,57 +4816,13 @@ void registerTestlibCmd(int argc, char *argv[]) {
     std::vector<std::string> args(1, argv[0]);
     checker.initialize();
 
-    for (int i = 1; i < argc; i++) {
-        if (!strcmp("--testset", argv[i])) {
-            if (i + 1 < argc && strlen(argv[i + 1]) > 0)
-                checker.setTestset(argv[++i]);
-            else
-                quit(_fail, std::string("Expected testset after --testset command line parameter"));
-        } else if (!strcmp("--group", argv[i])) {
-            if (i + 1 < argc)
-                checker.setGroup(argv[++i]);
-            else
-                quit(_fail, std::string("Expected group after --group command line parameter"));
-        } else
-            args.push_back(argv[i]);
-    }
-
-    argc = int(args.size());
-    if (argc > 1 && "--help" == args[1])
-        __testlib_help();
-
-    if (argc < 4 || argc > 6) {
-        quit(_fail, std::string("Program must be run with the following arguments: ") +
-                    std::string("[--testset testset] [--group group] <input-file> <output-file> <answer-file> [<report-file> [<-appes>]]") +
-                    "\nUse \"--help\" to get help information");
-    }
-
-    if (argc == 4) {
-        resultName = "";
-        appesMode = false;
-    }
-
-#ifndef EJUDGE
-    if (argc == 5) {
-        resultName = args[4];
-        appesMode = false;
-    }
-
-    if (argc == 6) {
-        if ("-APPES" != args[5] && "-appes" != args[5]) {
-            quit(_fail, std::string("Program must be run with the following arguments: ") +
-                        "<input-file> <output-file> <answer-file> [<report-file> [<-appes>]]");
-        } else {
-            resultName = args[4];
-            appesMode = true;
-        }
-    }
-#endif
-
-    inf.init(args[1], _input);
-    ouf.init(args[2], _output);
+    inf.init("input", _input);
+    ouf.init("user_out", _output);
     ouf.skipBom();
-    ans.init(args[3], _answer);
+    ans.init("answer", _answer);
+
+    resultName = "";
+    appesMode = false;
 }
 
 void registerTestlib(int argc, ...) {

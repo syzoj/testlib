@@ -1,5 +1,10 @@
 # Testlib
 
+> [!NOTE]
+> This is a patched version for SYZOJ 2. It supports `checker` mode and `interaction` mode. Please refer to [this article](https://loj.ac/d/124) to use it. (Chinese version only)
+> 
+> To build the checker or interactor successfully, you should replace `testlib.h` in rootfs to the patched one. We recommend to compile the code with C++11 or above and ≥10s compiling time limit.
+
 ## Intro
 
 This project contains a C++ implementation of testlib. It is already being used in many programming contests in Russia, such as the Russian National Olympiad in Informatics and different stages of ICPC. Join!
